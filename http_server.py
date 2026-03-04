@@ -1,30 +1,33 @@
-import socket, select
+import tcp_server
 
-host = '127.0.0.1'
-port = 8888
-max_msg_size = 4096
-
-
-def tcp_server():
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-    s.bind((host, port))
-    
-    s.listen(5)
-    return s
+new_line = "\r\n"
+version = "HTTP/1.1"
+status_codes= {
+    200: "OK",
+    400: "Bad Request",
+    404: "Not Found"
+}
 
 
-def create_response(val):
-    response_line = "HTTP/1.1 404 Not Found\r\n"
-    headers = ""
-    return "string"
+def create_resp_line(status):
+    response_line = " ".join([version, status, status_codes[status], new_line])
+    return response_line
+
+
+
+def create_response(status):
+    response_line = create_resp_line(status)    #"HTTP/1.1 404 Not Found\r\n"
+    headers = "".join([
+        "Server: Moshe\r\n"
+        "Content-Type: text/html\r\n"
+    ])
+    response_body = ""
+    return "".join([response_line, headers, "\r\n", response_body])
 
 
 
 
 def handle_request(data):
-
-
     print(data)
 
 
@@ -33,24 +36,5 @@ def handle_request(data):
 
 
 
-def main():
-    server = tcp_server()
-    client_sockets = []
-    while True:
-        rlist, wlist, xlist = select.select([server] + client_sockets, [], [])
-        for current_socket in rlist:
-            if current_socket is server:
-                connection, client_address = current_socket.accept()
-                print("New client joined!", client_address)
-                client_sockets.append(connection)
-            else:
-                data = current_socket.recv(max_msg_size).decode()
-                response = handle_request(data)
-                current_socket.send(response)
-                client_sockets.remove(current_socket)
-                current_socket.close()
-
-
-
 if __name__ == "__main__":
-    main()
+    tcp_server.main()
