@@ -23,7 +23,7 @@ def main():
                 client_sockets.append(connection)
             else:
                 data = current_socket.recv(max_msg_size).decode()
-                response = http_server.handle_request(data)
+                response = http_server.request_processing(data)
                 print(response.decode())
                 current_socket.send(response)
                 client_sockets.remove(current_socket)
