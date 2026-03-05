@@ -1,5 +1,6 @@
 import http_server, tcp_server
 
+delimiter_line = "-----------------------------\n"
 DEFAULT_FAILURE = 400
 DEFAULT_SUCCESS = 200
 NOT_IMPLEMENTED = 501
@@ -27,19 +28,26 @@ def handle_req_line(req_line):
     if tokens[2] != http_server.version:
         return METHOD_NOT_SUPPORTED
 
+    print(
+        "\nRequest method is %s\nTarget Resource is %s\n"
+        % (tokens[0], tokens[1])
+    )
+
     return DEFAULT_SUCCESS
 
 
 def handle_headers(headers):
     status = DEFAULT_FAILURE
     has_body = False
-    print(headers)
+    # print(delimiter_line + "Request headers:")
     for header in headers:
         try:
             field_name, value = header.split(': ')
         except Exception as e:
             print(e)
             return DEFAULT_FAILURE, has_body
+
+        print("Used %s with value: %s" % (field_name, value))
 
         if field_name not in supported_headers:
             return DEFAULT_FAILURE, has_body
@@ -64,6 +72,7 @@ def handle_header(field, value):
 
 
 def handle_body(body):
+    print("Request included body: %s" % body)
     return DEFAULT_SUCCESS
 
 
@@ -74,6 +83,9 @@ def handle_request(request):
         body = "Request is malformed"
         return DEFAULT_FAILURE, body
     head_lines = req_parts[0].split("\r\n")
+
+    print(delimiter_line + "LOG:")
+
     status = handle_req_line(head_lines[0])
     if status >= 300:
         return status, body

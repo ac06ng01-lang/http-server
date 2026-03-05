@@ -19,7 +19,7 @@ def main():
         for current_socket in rlist:
             if current_socket is server:
                 connection, client_address = current_socket.accept()
-                print("New client joined!", client_address)
+                # print("New client joined!", client_address)
                 client_sockets.append(connection)
             else:
                 data = current_socket.recv(max_msg_size).decode()
