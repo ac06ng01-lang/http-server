@@ -1,11 +1,22 @@
-import http_server, tcp_server
+import http_server, tcp_server, parser
 
-delimiter_line = "-----------------------------\n"
+
+REQUEST_UA_VALUE = ""
+REQUEST_RANGE_VALUE = None
+REQUEST_HAS_BODY = False
+REQUEST_DATE_VALUE = 0
+
+RESPONSE_STATUS_CODE = 500
+NO_RESPONSE_BODY = ""
+
+NO_REQUEST_BODY = False
 DEFAULT_FAILURE = 400
 DEFAULT_SUCCESS = 200
 NOT_IMPLEMENTED = 501
 METHOD_NOT_SUPPORTED = 505
 
+
+delimiter_line = "-----------------------------\n"
 supported_methods = [
     "GET"
 ]
@@ -20,82 +31,76 @@ supported_headers = [
 def handle_req_line(req_line):
     tokens = req_line.split(' ')
     if len(tokens) != 3:
-        return DEFAULT_FAILURE
+        raise Exception(DEFAULT_FAILURE)
 
     if tokens[0] not in supported_methods:
-        return NOT_IMPLEMENTED
+        raise Exception(NOT_IMPLEMENTED)
 
     if tokens[2] != http_server.version:
-        return METHOD_NOT_SUPPORTED
+        raise Exception(METHOD_NOT_SUPPORTED)
 
     print(
         "\nRequest method is %s\nTarget Resource is %s\n"
         % (tokens[0], tokens[1])
     )
+    resource = parser.target_parser(tokens[1])
+    return resource
 
-    return DEFAULT_SUCCESS
 
 
 def handle_headers(headers):
-    status = DEFAULT_FAILURE
-    has_body = False
-    # print(delimiter_line + "Request headers:")
     for header in headers:
         try:
             field_name, value = header.split(': ')
         except Exception as e:
-            print(e)
-            return DEFAULT_FAILURE, has_body
+            raise Exception(DEFAULT_FAILURE)
 
         print("Used %s with value: %s" % (field_name, value))
 
         if field_name not in supported_headers:
-            return DEFAULT_FAILURE, has_body
-
-        status, has_body = handle_header(field_name, value)
-        if status == DEFAULT_FAILURE:
-            return DEFAULT_FAILURE, has_body
-
-    return status, has_body
+            wrapper_handle_header(field_name, value)
 
 
-def handle_header(field, value):
+
+
+
+def wrapper_handle_header(field, value):
     if field == "User-Agent":
-        print("")
+        try:
+            parser.user_agent_handler(value)
+        except Exception as e:
+            raise e
+
     elif field == "Range":
-        print("")
+        try:
+            parser.range_handler(value)
+        except Exception as e:
+            raise e
+
     elif field == "Date":
-        print("")
-    else:
-        return DEFAULT_FAILURE, False
-    return DEFAULT_SUCCESS, False
+        try:
+            parser.date_handler(value)
+        except Exception as e:
+            raise e
 
 
 def handle_body(body):
     print("Request included body: %s" % body)
-    return DEFAULT_SUCCESS
 
 
 def handle_request(request):
-    body = ""
     req_parts = request.split("\r\n\r\n")
     if len(req_parts) != 2:
-        body = "Request is malformed"
-        return DEFAULT_FAILURE, body
+        raise Exception("Request is malformed")
     head_lines = req_parts[0].split("\r\n")
 
     print(delimiter_line + "LOG:")
+    resource = handle_req_line(head_lines[0])
+    handle_headers(head_lines[1::])
 
-    status = handle_req_line(head_lines[0])
-    if status >= 300:
-        return status, body
-
-    status, has_body = handle_headers(head_lines[1::])
-    if status >= 300:
-        return status, body
-    if has_body:
-        status = handle_body(req_parts[1])
-    return status, body
+    if REQUEST_HAS_BODY:
+        handle_body(req_parts[1])
+    return resource
 
 
 if __name__ == "__main__":

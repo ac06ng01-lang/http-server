@@ -24,8 +24,8 @@ def main():
             else:
                 data = current_socket.recv(max_msg_size).decode()
                 response = http_server.request_processing(data)
-                print(response.decode())
-                current_socket.send(response)
+                print(response)
+                current_socket.send(response.encode())
                 client_sockets.remove(current_socket)
                 current_socket.close()
 

@@ -1,4 +1,4 @@
-import http_server, tcp_server
+import http_server, tcp_server, request_handler
 
 
 gen_headers = [
@@ -16,14 +16,18 @@ def construct_headers(status):
     return "".join(gen_headers)
 
 
-def construct_body(body):
-    return body
+def construct_body(resource):
+    ranges = request_handler.REQUEST_RANGE_VALUE
+    if ranges is None or len(ranges) <= 0:
+        ranges = 0
+    return ""
 
 
-def create_response(status, body):
+def create_response(resource=""):
+    status = request_handler.RESPONSE_STATUS_CODE
     response_line = create_resp_line(status)
     headers = construct_headers(status)
-    response_body = construct_body(body)
+    response_body = construct_body(resource)
     return "".join([response_line, headers, http_server.new_line, response_body])
 
 
