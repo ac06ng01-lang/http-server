@@ -1,22 +1,15 @@
+import threading
 import http_server, tcp_server, parser
 
-
-REQUEST_UA_VALUE = ""
-REQUEST_RANGE_VALUE = None
-REQUEST_HAS_BODY = False
-REQUEST_DATE_VALUE = 0
-
-RESPONSE_STATUS_CODE = 500
+# Constants
 NO_RESPONSE_BODY = ""
-
-NO_REQUEST_BODY = False
-DEFAULT_FAILURE = 400
+SERVER_FAILURE = 500
+BAD_REQUEST = 400
 DEFAULT_SUCCESS = 200
 NOT_IMPLEMENTED = 501
 METHOD_NOT_SUPPORTED = 505
-
-
 delimiter_line = "-----------------------------\n"
+
 supported_methods = [
     "GET"
 ]
@@ -27,17 +20,30 @@ supported_headers = [
     "Range,"
 ]
 
+# Should be thread-local data
+# REQUEST_UA_VALUE = ""
+# REQUEST_RANGE_VALUE = None
+# REQUEST_HAS_BODY = False
+# REQUEST_DATE_VALUE = 0
+# RESPONSE_STATUS_CODE = 200
+
+thread_local = threading.current_thread().__dict__
+
+
 
 def handle_req_line(req_line):
     tokens = req_line.split(' ')
     if len(tokens) != 3:
-        raise Exception(DEFAULT_FAILURE)
+        thread_local['RESPONSE_STATUS_CODE'] = BAD_REQUEST
+        raise Exception("BAD_REQUEST")
 
     if tokens[0] not in supported_methods:
-        raise Exception(NOT_IMPLEMENTED)
+        thread_local['RESPONSE_STATUS_CODE'] = NOT_IMPLEMENTED
+        raise Exception("NOT_IMPLEMENTED")
 
     if tokens[2] != http_server.version:
-        raise Exception(METHOD_NOT_SUPPORTED)
+        thread_local['RESPONSE_STATUS_CODE'] = METHOD_NOT_SUPPORTED
+        raise Exception("METHOD_NOT_SUPPORTED")
 
     print(
         "\nRequest method is %s\nTarget Resource is %s\n"
@@ -53,7 +59,8 @@ def handle_headers(headers):
         try:
             field_name, value = header.split(': ')
         except Exception as e:
-            raise Exception(DEFAULT_FAILURE)
+            thread_local['RESPONSE_STATUS_CODE'] = BAD_REQUEST
+            raise Exception("BAD_REQUEST")
 
         print("Used %s with value: %s" % (field_name, value))
 
@@ -62,25 +69,26 @@ def handle_headers(headers):
 
 
 
-
-
 def wrapper_handle_header(field, value):
     if field == "User-Agent":
         try:
             parser.user_agent_handler(value)
         except Exception as e:
+            print("Error in User-Agent header parsing")
             raise e
 
     elif field == "Range":
         try:
             parser.range_handler(value)
         except Exception as e:
+            print("Error in Range header parsing")
             raise e
 
     elif field == "Date":
         try:
             parser.date_handler(value)
         except Exception as e:
+            print("Error in Date header parsing")
             raise e
 
 
@@ -91,14 +99,16 @@ def handle_body(body):
 def handle_request(request):
     req_parts = request.split("\r\n\r\n")
     if len(req_parts) != 2:
-        raise Exception("Request is malformed")
+        thread_local['RESPONSE_STATUS_CODE'] = BAD_REQUEST
+        raise Exception("BAD_REQUEST")
+
     head_lines = req_parts[0].split("\r\n")
 
     print(delimiter_line + "LOG:")
     resource = handle_req_line(head_lines[0])
     handle_headers(head_lines[1::])
 
-    if REQUEST_HAS_BODY:
+    if "REQUEST_HAS_BODY" in thread_local.keys():
         handle_body(req_parts[1])
     return resource
 

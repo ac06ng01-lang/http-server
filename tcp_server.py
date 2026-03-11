@@ -1,4 +1,4 @@
-import socket, select, http_server
+import socket, select, http_server, threading
 
 host = '127.0.0.1'
 port = 8888
@@ -10,25 +10,34 @@ def tcp_server():
     s.listen(5)
     return s
 
+def handle_connection(conn):
+    data = conn.recv(max_msg_size).decode()
+    response = http_server.request_processing(data)
+    print("\n\nResponse sent:" + response)
+    conn.send(response.encode())
+    conn.close()
 
 def main():
     server = tcp_server()
-    client_sockets = []
     while True:
-        rlist, wlist, xlist = select.select([server] + client_sockets, [], [])
-        for current_socket in rlist:
-            if current_socket is server:
-                connection, client_address = current_socket.accept()
-                # print("New client joined!", client_address)
-                client_sockets.append(connection)
-            else:
-                data = current_socket.recv(max_msg_size).decode()
-                response = http_server.request_processing(data)
-                print(response)
-                current_socket.send(response.encode())
-                client_sockets.remove(current_socket)
-                current_socket.close()
+        connection, client_address = server.accept()
+        new_thread = threading.Thread(target=handle_connection, args=(connection,))
+        new_thread.start()
 
+        # rlist, wlist, xlist = select.select([server] + client_sockets, [], [])
+        # for current_socket in rlist:
+        #     if current_socket is server:
+        #         connection, client_address = current_socket.accept()
+        #         # print("New client joined!", client_address)
+        #         client_sockets.append(connection)
+        #     else:
+        #         data = current_socket.recv(max_msg_size).decode()
+        #         response = http_server.request_processing(data)
+        #         print(response)
+        #         current_socket.send(response.encode())
+        #         client_sockets.remove(current_socket)
+        #         current_socket.close()
+        #
 
 if __name__ == "__main__":
     main()
