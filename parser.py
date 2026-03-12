@@ -24,8 +24,9 @@ def range_handler(value):
 
     ranges = directives[1].split(',')
     if len(ranges) == 1:
+        print("thread_local['SINGLE_PART_BODY'] = True")
+        thread_local['SINGLE_PART_BODY'] = True
         vals = ranges[0].split('-')
-        print(vals)
         if vals[0] == '':
             if not vals[1].isnumeric():
                 thread_local['RESPONSE_STATUS_CODE'] = request_handler.BAD_REQUEST
@@ -41,7 +42,6 @@ def range_handler(value):
             return
 
     thread_local['REQUEST_RANGE_VALUE'] = []
-    print(ranges)
     for span in ranges:
         vals = span.split('-')
         if len(vals) != 2:
