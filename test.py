@@ -1,4 +1,45 @@
+import os
 
+# file_name = "resources"
+# file_name += "/./index.html"
+#
+# try:
+#     with open(file_name, 'rb') as f:
+#         file_content = f.read()
+# except OSError as e:
+#     exit(10)
+#
+# print(file_content)
+
+
+strs = "81-100,1-10,20-11,100-102"
+ranges = strs.split(',')
+lst = None
+if len(ranges) == 1:
+    vals = ranges[0].split('-')
+    print(vals)
+    if vals[0] == "":
+        if not vals[1].isnumeric():
+            print(1)
+        lst = int(vals[1]) * -1
+    elif vals[1] == "":
+        if not vals[0].isnumeric():
+            print(2)
+        lst = int(vals[0])
+    else:
+        lst = []
+        lst.append([int(value) for value in vals],)
+
+for span in ranges:
+    vals = span.split('-')
+    print(vals)
+    if (not vals[0].isnumeric() or not vals[1].isnumeric()) or int(vals[0]) >= int(vals[1]):
+        print(vals[0].isnumeric())
+        print(vals[1].isnumeric())
+        print(int(vals[0]) >= int(vals[1]))
+if isinstance(lst, int):
+    print("int")
+print(lst)
 # s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 # conn = s.connect(('127.0.0.1',8888))
 # s.send(b'aaa')

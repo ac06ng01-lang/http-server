@@ -21,7 +21,7 @@ def request_processing(request):
         resource = request_handler.handle_request(request)
 
     except Exception as e:
-        print("Exception caught:\n%s" % e.args)
+        print("Exception caught in request handling:\n%s" % e.args)
         if not 'RESPONSE_STATUS_CODE' in thread_local.keys():
             thread_local['RESPONSE_STATUS_CODE'] = request_handler.SERVER_FAILURE
         # if request_handler.RESPONSE_STATUS_CODE == DEFAULT_SUCCESS:

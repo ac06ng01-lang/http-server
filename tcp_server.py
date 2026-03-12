@@ -1,4 +1,4 @@
-import socket, select, http_server, threading
+import socket, http_server, threading
 
 host = '127.0.0.1'
 port = 8888
@@ -12,9 +12,10 @@ def tcp_server():
 
 def handle_connection(conn):
     data = conn.recv(max_msg_size).decode()
+    # print(data)
     response = http_server.request_processing(data)
-    print("\n\nResponse sent:" + response)
-    conn.send(response.encode())
+    conn.send(response)
+    print("\n\nResponse sent:\n" + response.decode())
     conn.close()
 
 def main():
@@ -23,7 +24,6 @@ def main():
         connection, client_address = server.accept()
         new_thread = threading.Thread(target=handle_connection, args=(connection,))
         new_thread.start()
-
         # rlist, wlist, xlist = select.select([server] + client_sockets, [], [])
         # for current_socket in rlist:
         #     if current_socket is server:

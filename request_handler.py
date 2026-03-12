@@ -2,10 +2,12 @@ import threading
 import http_server, tcp_server, parser
 
 # Constants
-NO_RESPONSE_BODY = ""
 SERVER_FAILURE = 500
 BAD_REQUEST = 400
+NOT_FOUND = 404
+RANGE_NOT_SATISFIABLE = 416
 DEFAULT_SUCCESS = 200
+PARTIAL_CONTENT = 206
 NOT_IMPLEMENTED = 501
 METHOD_NOT_SUPPORTED = 505
 delimiter_line = "-----------------------------\n"
@@ -17,7 +19,7 @@ supported_methods = [
 supported_headers = [
     "User-Agent",
     "Date",
-    "Range,"
+    "Range"
 ]
 
 # Should be thread-local data
@@ -64,7 +66,7 @@ def handle_headers(headers):
 
         print("Used %s with value: %s" % (field_name, value))
 
-        if field_name not in supported_headers:
+        if field_name in supported_headers:
             wrapper_handle_header(field_name, value)
 
 
@@ -98,7 +100,8 @@ def handle_body(body):
 
 def handle_request(request):
     req_parts = request.split("\r\n\r\n")
-    if len(req_parts) != 2:
+    # print(req_parts)
+    if len(req_parts) < 2:
         thread_local['RESPONSE_STATUS_CODE'] = BAD_REQUEST
         raise Exception("BAD_REQUEST")
 
@@ -110,6 +113,10 @@ def handle_request(request):
 
     if "REQUEST_HAS_BODY" in thread_local.keys():
         handle_body(req_parts[1])
+    elif len(req_parts) != 2:
+        thread_local['RESPONSE_STATUS_CODE'] = BAD_REQUEST
+        raise Exception("BAD_REQUEST")
+
     return resource
 
 
