@@ -2,12 +2,14 @@ import threading
 import http_server, tcp_server, parser
 
 # Constants
-SERVER_FAILURE = 500
-BAD_REQUEST = 400
-NOT_FOUND = 404
-RANGE_NOT_SATISFIABLE = 416
 DEFAULT_SUCCESS = 200
 PARTIAL_CONTENT = 206
+NOT_MODIFIED = 304
+BAD_REQUEST = 400
+NOT_FOUND = 404
+PRECONDITION_FAILED = 412
+RANGE_NOT_SATISFIABLE = 416
+SERVER_FAILURE = 500
 NOT_IMPLEMENTED = 501
 METHOD_NOT_SUPPORTED = 505
 delimiter_line = "-----------------------------\n"
@@ -19,15 +21,10 @@ supported_methods = [
 supported_headers = [
     "User-Agent",
     "Date",
-    "Range"
+    "Range",
+    "If-Modified-Since",
+    "If-Unmodified-Since",
 ]
-
-# Should be thread-local data
-# REQUEST_UA_VALUE = ""
-# REQUEST_RANGE_VALUE = None
-# REQUEST_HAS_BODY = False
-# REQUEST_DATE_VALUE = 0
-# RESPONSE_STATUS_CODE = 200
 
 thread_local = threading.current_thread().__dict__
 
@@ -52,8 +49,8 @@ def handle_req_line(req_line):
         % (tokens[0], tokens[1])
     )
     resource = parser.target_parser(tokens[1])
+    thread_local['CACHE_KEY'] = tokens[0].encode() + b" " + resource.encode() + b"\r\n"
     return resource
-
 
 
 def handle_headers(headers):
@@ -82,6 +79,7 @@ def wrapper_handle_header(field, value):
     elif field == "Range":
         try:
             parser.range_handler(value)
+            thread_local['CACHE_KEY'] += field.encode() + b' ' + value.encode()
         except Exception as e:
             print("Error in Range header parsing")
             raise e
@@ -91,6 +89,22 @@ def wrapper_handle_header(field, value):
             parser.date_handler(value)
         except Exception as e:
             print("Error in Date header parsing")
+            raise e
+
+    elif field == "If-Modified-Since":
+        try:
+            parser.modified_since_handler(value)
+            # thread_local['CACHE_KEY'] += field.encode() + b' ' + value.encode()
+        except Exception as e:
+            print("Error in If-Modified-Since header parsing")
+            raise e
+
+    elif field == "If-Unmodified-Since":
+        try:
+            parser.unmodified_since_handler(value)
+            # thread_local['CACHE_KEY'] += field.encode() + b' ' + value.encode()
+        except Exception as e:
+            print("Error in If-Unmodified-Since header parsing")
             raise e
 
 

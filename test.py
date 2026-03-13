@@ -1,12 +1,20 @@
-import os, mimetypes
+import hashlib, mimetypes, httpdate, os.path, datetime
+"""
+Fri, 13 Mar 2026 16:47:15 GMT
+Tue, 22 Feb 2026 22:00:00 GMT
 
+"""
 
+# timer = httpdate.httpdate_to_unixtime("Fri, 13 Mar 2026 22:00:00 GMT")
+# print(httpdate.unixtime_to_httpdate(timer).encode())
+cached_response = b"aloha friends this is michael and jordan speaking"
+new_date = 13
+position_date = cached_response.find(b"fr")
+date_newline = cached_response.find(b"nd", position_date)
+updated_response = b''.join([cached_response[:position_date + len(b"en")], str(new_date).encode(),
+                            cached_response[date_newline:]])
+print(updated_response)
 
-file_name = "resources"
-file_name += "/./index.html/"
-
-print(mimetypes.guess_file_type(file_name)[0] or 'text/html')
-#
 # try:
 #     with open(file_name, 'rb') as f:
 #         file_content = f.read()

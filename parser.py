@@ -1,4 +1,4 @@
-import httpdate, threading, os, uritools
+import httpdate, threading, os.path, uritools
 import request_handler, tcp_server
 
 supported_range_units = [
@@ -10,6 +10,29 @@ thread_local = threading.current_thread().__dict__
 
 def user_agent_handler(value):
     thread_local['REQUEST_UA_VALUE'] = value
+
+
+def modified_since_handler(value):
+    try:
+        thread_local['REQUEST_MODIFIED_SINCE'] = httpdate.httpdate_to_unixtime(value)
+        if 'REQUEST_UNMODIFIED_SINCE' in thread_local.keys():
+            raise ValueError()
+    except ValueError as e:
+        print(e)
+        print(e.args)
+        thread_local['RESPONSE_STATUS_CODE'] = request_handler.BAD_REQUEST
+        raise Exception("Modified-Since value malformed")
+
+
+def unmodified_since_handler(value):
+    try:
+        thread_local['REQUEST_UNMODIFIED_SINCE'] = httpdate.httpdate_to_unixtime(value)
+        if 'REQUEST_MODIFIED_SINCE' in thread_local.keys():
+            raise ValueError()
+    except ValueError as e:
+        thread_local['RESPONSE_STATUS_CODE'] = request_handler.BAD_REQUEST
+        raise Exception("Unmodified-Since value malformed")
+
 
 
 def range_handler(value):
@@ -77,13 +100,12 @@ def target_parser(target):
         raise Exception("BAD_REQUEST")
     elif uri_parts.isabspath():
         file_name += uri_parts.path
-        # [print(ord(c)) for c in uri_parts.path]
         if uri_parts.path == '/':
             file_name += "index.html"
 
     file_name = os.path.normpath(file_name)
 
-    print(file_name)
+    # print(file_name)
     if not file_name.startswith("resources") or not os.path.exists(file_name):
         thread_local['RESPONSE_STATUS_CODE'] = request_handler.NOT_FOUND
         raise Exception("NOT_FOUND")

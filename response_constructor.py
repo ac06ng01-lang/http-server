@@ -1,4 +1,5 @@
-import threading, httpdate, time, mimetypes
+import threading, httpdate, time, mimetypes, os.path
+from filelock import FileLock
 import http_server, tcp_server, request_handler
 
 gen_headers = [
@@ -6,10 +7,12 @@ gen_headers = [
     "Connection: close\r\n",
 ]
 
-content_length_string = "Content-Length: {0}\r\n"
-date_string = "Date: {0}\r\n"
+
 boundary_string = "SEPARATING_STRING"
 multipart_content_type_value = "multipart/byteranges; boundary=" + boundary_string
+last_modified_string = "Last-Modified: {0}\r\n"
+content_length_string = "Content-Length: {0}\r\n"
+date_string = "Date: {0}\r\n"
 multipart_prefix_string = "--"+ boundary_string + "\r\n{0}{1}"
 content_range_string = "Content-Range: bytes {0}-{1}/{2}\r\n"
 content_type_string = "Content-Type: {0}\r\n"
@@ -20,8 +23,8 @@ def create_resp_line(status):
     response_line = " ".join([http_server.version, str(status), http_server.status_codes[status], http_server.new_line])
     return response_line
 
-
-def construct_headers(status):
+def construct_headers():
+    thread_local['HEADER-DATE'] = date_string.format(httpdate.unixtime_to_httpdate(int(time.time())))
     return "".join(gen_headers)
 
 def get_content_type(resource):
@@ -30,8 +33,9 @@ def get_content_type(resource):
 
 def construct_body(resource):
     try:
-        with open(resource, 'rb') as f:
-            file_content = f.read()
+        with FileLock(resource + ".lock", thread_local=False):
+            with open(resource, 'rb') as f:
+                file_content = f.read()
     except OSError as e:
         thread_local['RESPONSE_STATUS_CODE'] = request_handler.NOT_FOUND
         raise Exception("NOT_FOUND")
@@ -40,7 +44,8 @@ def construct_body(resource):
     file_len = len(file_content)
 
     thread_local['HEADER-CONTENT_TYPE'] = content_type
-    thread_local['HEADER-DATE'] = date_string.format(httpdate.unixtime_to_httpdate(int(time.time())))
+    thread_local['HEADER-LAST_MODIFIED'] = last_modified_string.format(httpdate.unixtime_to_httpdate(
+        int(os.path.getmtime(resource))))
 
     if 'REQUEST_RANGE_VALUE' in thread_local.keys():
         ranges = thread_local['REQUEST_RANGE_VALUE']
@@ -56,7 +61,8 @@ def construct_body(resource):
         for range_start, range_end in ranges:
             if range_start < file_len and range_end + 1 <= file_len:
                 if 'SINGLE_PART_BODY' not in thread_local.keys():
-                    partial_content += multipart_prefix_string.format(content_type, content_range_string.format(range_start, range_end, file_len,),).encode()
+                    partial_content += multipart_prefix_string.format(content_type,
+                           content_range_string.format(range_start, range_end, file_len,),).encode()
                 partial_content += file_content[range_start:range_end + 1]
                 if 'SINGLE_PART_BODY' not in thread_local.keys():
                     partial_content += b"\r\n"
@@ -76,25 +82,32 @@ def construct_body(resource):
         return file_content
 
 def add_optional_headers():
-    thread_local['RESPONSE_HEADERS'] = []
+    headers = []
     for key, val in thread_local.items():
         if "HEADER-" in key:
-            thread_local['RESPONSE_HEADERS'].append(val)
-    thread_local['RESPONSE_HEADERS'] = ''.join(thread_local['RESPONSE_HEADERS'])
+            headers.append(val)
+    return ''.join(headers)
 
 def create_response(resource=""):
+    status = thread_local['RESPONSE_STATUS_CODE']
     response_body = b""
     if resource != "":
+        if status == request_handler.NOT_MODIFIED:
+            thread_local['HEADER-LAST_MODIFIED'] = last_modified_string.format(
+                httpdate.unixtime_to_httpdate(int(os.path.getmtime(resource)))
+            )
         try:
             response_body = construct_body(resource)
         except Exception as e:
             print("Exception caught in response constructing:\n%s" % e.args)
-    add_optional_headers()
+    headers = construct_headers()
+    headers += add_optional_headers()
+    # updating in case it changed in any of the former functions
     status = thread_local['RESPONSE_STATUS_CODE']
     response_line = create_resp_line(status)
-    headers = construct_headers(status)
 
-    return b"".join((response_line.encode(), headers.encode(), thread_local['RESPONSE_HEADERS'].encode(), http_server.new_line.encode(), response_body))
+
+    return b"".join((response_line.encode(), headers.encode(), http_server.new_line.encode(), response_body))
 
 
 
