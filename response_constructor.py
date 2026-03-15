@@ -1,6 +1,6 @@
 import threading, httpdate, time, mimetypes, os.path
 from filelock import FileLock
-import http_server, tcp_server, request_handler
+import http_server, tcp_server, request_handler, logger
 
 gen_headers = [
     "Server: Moshe\r\n",
@@ -99,7 +99,8 @@ def create_response(resource=""):
         try:
             response_body = construct_body(resource)
         except Exception as e:
-            print("Exception caught in response constructing:\n%s" % e.args)
+            logger.logger(thread_local['USER_ADDRESS'], e.args, logger.INDEX_ERROR)
+
     headers = construct_headers()
     headers += add_optional_headers()
     # updating in case it changed in any of the former functions

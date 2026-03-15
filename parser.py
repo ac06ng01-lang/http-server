@@ -18,8 +18,6 @@ def modified_since_handler(value):
         if 'REQUEST_UNMODIFIED_SINCE' in thread_local.keys():
             raise ValueError()
     except ValueError as e:
-        print(e)
-        print(e.args)
         thread_local['RESPONSE_STATUS_CODE'] = request_handler.BAD_REQUEST
         raise Exception("Modified-Since value malformed")
 
@@ -47,7 +45,6 @@ def range_handler(value):
 
     ranges = directives[1].split(',')
     if len(ranges) == 1:
-        print("thread_local['SINGLE_PART_BODY'] = True")
         thread_local['SINGLE_PART_BODY'] = True
         vals = ranges[0].split('-')
         if vals[0] == '':

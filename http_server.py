@@ -1,4 +1,6 @@
 import threading
+
+import logger
 import tcp_server, request_handler, response_constructor, caching_handler
 
 new_line = "\r\n"
@@ -21,9 +23,8 @@ thread_local = threading.current_thread().__dict__
 def request_processing(request):
     try:
         resource = request_handler.handle_request(request)
-
     except Exception as e:
-        print("Exception caught in request handling:\n%s" % e.args)
+        logger.logger(thread_local['USER_ADDRESS'], e.args, logger.INDEX_ERROR)
         if not 'RESPONSE_STATUS_CODE' in thread_local.keys():
             thread_local['RESPONSE_STATUS_CODE'] = request_handler.SERVER_FAILURE
         return response_constructor.create_response()
@@ -35,7 +36,6 @@ def request_processing(request):
             if e.args[0] == request_handler.NOT_MODIFIED:
                 return response_constructor.create_response()
 
-
     if 'REQUEST_UNMODIFIED_SINCE' in thread_local.keys():
         try:
             caching_handler.unmodified_since_resolver(resource)
@@ -43,17 +43,16 @@ def request_processing(request):
             if e.args[0] == request_handler.PRECONDITION_FAILED:
                 return response_constructor.create_response()
 
-
     try:
         cached_response = caching_handler.fetch_from_cache(resource)
         return cached_response
     except FileNotFoundError as error:
-        print(f"finding in cached failed!\nthe error is {error}")
+        # print(f"finding in cached failed!\nthe error is {error}")
         if not 'RESPONSE_STATUS_CODE' in thread_local.keys():
             thread_local['RESPONSE_STATUS_CODE'] = request_handler.DEFAULT_SUCCESS
         return response_constructor.create_response(resource)
     except Exception as e:
-        print(f"finding in cached failed!\nerror is {e}")
+        logger.logger(thread_local['USER_ADDRESS'], e.args, logger.INDEX_ERROR)
         thread_local['RESPONSE_STATUS_CODE'] = request_handler.SERVER_FAILURE
         return response_constructor.create_response()
 

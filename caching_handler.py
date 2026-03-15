@@ -28,7 +28,7 @@ def save_to_cache(content):
             with open(path, 'xb') as file:
                 file.write(content)
     except FileExistsError:
-        print(f"File keyed {key} already exists in cache")
+        # print(f"File keyed {key} already exists in cache")
         with FileLock(path.decode() + ".lock", thread_local=False):
             with open(path, 'r+b') as file:
                 if file.read() != content:
@@ -47,15 +47,15 @@ def fetch_from_cache(resource):
                 if os.path.getmtime(resource) >= os.path.getmtime(path):
                     raise ValueError()
                 thread_local.pop('CACHE_KEY')
-                print("found in cache:")
+                # print("found in cache:")
                 return update_date_header(file.read())
 
     except ValueError:
         remove(path)
-        print(f"Resource {resource} was updated since caching in {path}")
+        # print(f"Resource {resource} was updated since caching in {path}")
         raise FileNotFoundError("no file")
     except OSError:
-        print(f"File keyed {key} doesn't exist in cache")
+        # print(f"File keyed {key} doesn't exist in cache")
         raise FileNotFoundError("no file")
 
 

@@ -1,5 +1,5 @@
 import socket, threading
-import http_server, caching_handler
+import http_server, caching_handler, logger
 
 host = '127.0.0.1'
 port = 8888
@@ -7,20 +7,27 @@ max_msg_size = 4096
 
 thread_local = threading.current_thread().__dict__
 
+def clean_addr(addr):
+    return ':'.join(str(part) for part in addr)
+
+
 def tcp_server():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind((host, port))
     s.listen(5)
     return s
 
-def handle_connection(conn):
+def handle_connection(conn, addr):
+    addr = clean_addr(addr)
+    thread_local['USER_ADDRESS'] = addr
     data = conn.recv(max_msg_size).decode()
+    logger.logger(addr, data, logger.INDEX_REQUEST)
     # print(data)
     response = http_server.request_processing(data)
     conn.send(response)
+    logger.logger(addr, response.decode(), logger.INDEX_RESPONSE)
     if 'CACHE_KEY' in thread_local.keys() and 200 <= thread_local['RESPONSE_STATUS_CODE'] < 300:
         caching_handler.save_to_cache(response)
-    print("\n\nResponse sent:\n" + response.decode())
     conn.close()
     to_be_removed = []
     for key in thread_local.keys():
@@ -33,7 +40,7 @@ def main():
     server = tcp_server()
     while True:
         connection, client_address = server.accept()
-        new_thread = threading.Thread(target=handle_connection, args=(connection,))
+        new_thread = threading.Thread(target=handle_connection, args=(connection, client_address))
         new_thread.start()
 
 

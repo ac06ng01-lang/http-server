@@ -44,10 +44,10 @@ def handle_req_line(req_line):
         thread_local['RESPONSE_STATUS_CODE'] = METHOD_NOT_SUPPORTED
         raise Exception("METHOD_NOT_SUPPORTED")
 
-    print(
-        "\nRequest method is %s\nTarget Resource is %s\n"
-        % (tokens[0], tokens[1])
-    )
+    # print(
+    #     "\nRequest method is %s\nTarget Resource is %s\n"
+    #     % (tokens[0], tokens[1])
+    # )
     resource = parser.target_parser(tokens[1])
     thread_local['CACHE_KEY'] = tokens[0].encode() + b" " + resource.encode() + b"\r\n"
     return resource
@@ -61,8 +61,6 @@ def handle_headers(headers):
             thread_local['RESPONSE_STATUS_CODE'] = BAD_REQUEST
             raise Exception("BAD_REQUEST")
 
-        print("Used %s with value: %s" % (field_name, value))
-
         if field_name in supported_headers:
             wrapper_handle_header(field_name, value)
 
@@ -73,39 +71,34 @@ def wrapper_handle_header(field, value):
         try:
             parser.user_agent_handler(value)
         except Exception as e:
-            print("Error in User-Agent header parsing")
-            raise e
+            raise Exception(e.args, "Error in User-Agent header parsing")
 
     elif field == "Range":
         try:
             parser.range_handler(value)
             thread_local['CACHE_KEY'] += field.encode() + b' ' + value.encode()
         except Exception as e:
-            print("Error in Range header parsing")
-            raise e
+            raise Exception(e.args, "Error in Range header parsing")
 
     elif field == "Date":
         try:
             parser.date_handler(value)
         except Exception as e:
-            print("Error in Date header parsing")
-            raise e
+            raise Exception(e.args, "Error in Date header parsing")
+
 
     elif field == "If-Modified-Since":
         try:
             parser.modified_since_handler(value)
-            # thread_local['CACHE_KEY'] += field.encode() + b' ' + value.encode()
         except Exception as e:
-            print("Error in If-Modified-Since header parsing")
-            raise e
+            raise Exception(e.args, "Error in If-Modified-Since header parsing")
+
 
     elif field == "If-Unmodified-Since":
         try:
             parser.unmodified_since_handler(value)
-            # thread_local['CACHE_KEY'] += field.encode() + b' ' + value.encode()
         except Exception as e:
-            print("Error in If-Unmodified-Since header parsing")
-            raise e
+            raise Exception(e.args, "Error in If-Unmodified-Since header parsing")
 
 
 def handle_body(body):
@@ -114,14 +107,12 @@ def handle_body(body):
 
 def handle_request(request):
     req_parts = request.split("\r\n\r\n")
-    # print(req_parts)
     if len(req_parts) < 2:
         thread_local['RESPONSE_STATUS_CODE'] = BAD_REQUEST
         raise Exception("BAD_REQUEST")
 
     head_lines = req_parts[0].split("\r\n")
 
-    print(delimiter_line + "LOG:")
     resource = handle_req_line(head_lines[0])
     handle_headers(head_lines[1::])
 
