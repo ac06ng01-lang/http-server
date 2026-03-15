@@ -99,7 +99,7 @@ def create_response(resource=""):
         try:
             response_body = construct_body(resource)
         except Exception as e:
-            logger.logger(thread_local['USER_ADDRESS'], e.args, logger.INDEX_ERROR)
+            logger.logger(tcp_server.clean_addr(thread_local['USER_ADDRESS']), e.args, logger.INDEX_ERROR)
 
     headers = construct_headers()
     headers += add_optional_headers()

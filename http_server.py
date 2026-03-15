@@ -24,7 +24,7 @@ def request_processing(request):
     try:
         resource = request_handler.handle_request(request)
     except Exception as e:
-        logger.logger(thread_local['USER_ADDRESS'], e.args, logger.INDEX_ERROR)
+        logger.logger(tcp_server.clean_addr(thread_local['USER_ADDRESS']), e.args, logger.INDEX_ERROR)
         if not 'RESPONSE_STATUS_CODE' in thread_local.keys():
             thread_local['RESPONSE_STATUS_CODE'] = request_handler.SERVER_FAILURE
         return response_constructor.create_response()
@@ -52,7 +52,7 @@ def request_processing(request):
             thread_local['RESPONSE_STATUS_CODE'] = request_handler.DEFAULT_SUCCESS
         return response_constructor.create_response(resource)
     except Exception as e:
-        logger.logger(thread_local['USER_ADDRESS'], e.args, logger.INDEX_ERROR)
+        logger.logger(tcp_server.clean_addr(thread_local['USER_ADDRESS']), e.args, logger.INDEX_ERROR)
         thread_local['RESPONSE_STATUS_CODE'] = request_handler.SERVER_FAILURE
         return response_constructor.create_response()
 
