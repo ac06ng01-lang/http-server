@@ -1,11 +1,18 @@
-import mysql.connector
+import mysql.connector, time
 
-mydb = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="simplegh1023",
-    database="server_logs"
-)
+mydb = None
+while mydb is None:
+    try:
+        mydb = mysql.connector.connect(
+            host="db",
+            user="root",
+            password="simplegh1023",
+            database="server_logs"
+        )
+        print("Successfully connected to the MySQL database!")
+    except mysql.connector.Error as err:
+        print("Database not ready yet, waiting 3 seconds...")
+        time.sleep(3)
 
 LOG_TABLES = [
     "request_logs",
