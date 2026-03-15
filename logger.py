@@ -26,6 +26,7 @@ INDEX_ERROR = 2
 
 
 def logger(address, data, index):
+    # print(address)
     if not isinstance(data, str):
         data = ', '.join(data)
     cursor = mydb.cursor()

@@ -8,8 +8,9 @@ max_msg_size = 4096
 thread_local = threading.current_thread().__dict__
 
 def clean_addr(addr):
-    return ':'.join(str(part) for part in addr)
-
+    if not isinstance(addr, str):
+        addr = ':'.join(str(part) for part in addr)
+    return addr
 
 def tcp_server():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
